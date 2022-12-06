@@ -29,12 +29,12 @@ var _ = ginkgo.Describe("AVO Tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Make sure the CRD exists
-		result, err := apiextensions.ApiextensionsV1().CustomResourceDefinitions().Get(context.TODO(), "", v1.GetOptions{})
+		result, err := apiextensions.ApiextensionsV1().CustomResourceDefinitions().Get(context.TODO(), crdName, v1.GetOptions{})
 
 		if err != nil {
-			log.Printf("CRD not found: %v", err.Error())
+			log.Printf("CRD %v not found: %v", crdName, err.Error())
 		} else {
-			log.Printf("CRD found: %v", result)
+			log.Printf("CRD %v found: %v", crdName, result)
 		}
 
 		Expect(err).NotTo(HaveOccurred())
