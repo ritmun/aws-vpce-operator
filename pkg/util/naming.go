@@ -22,11 +22,14 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	route53Types "github.com/aws/aws-sdk-go-v2/service/route53/types"
 )
 
 const (
 	OperatorTagKey           = "kubernetes.io/aws-vpce-operator"
 	OperatorTagValue         = "managed"
+	RedHatManagedTagKey      = "red-hat-managed"
+	RedHatManagedTagValue    = "true"
 	SecurityGroupDescription = "Managed by AWS VPCE Operator"
 )
 
@@ -34,13 +37,17 @@ const (
 // created by this operator
 func GenerateAwsTags(name, clusterTagKey string) ([]types.Tag, error) {
 	if name == "" || clusterTagKey == "" {
-		return nil, errors.New("name and clusterTagKey must not be empty")
+		return nil, errors.New("failed to GenerateAwsTags: name and clusterTagKey must not be empty")
 	}
 
 	return []types.Tag{
 		{
 			Key:   aws.String(OperatorTagKey),
 			Value: aws.String(OperatorTagValue),
+		},
+		{
+			Key:   aws.String(RedHatManagedTagKey),
+			Value: aws.String(RedHatManagedTagValue),
 		},
 		{
 			Key:   aws.String(clusterTagKey),
@@ -72,7 +79,7 @@ func GenerateAwsTagsAsMap(name, clusterTagKey string) (map[string]string, error)
 // GetClusterTagKey returns the tag assigned to all AWS resources for the given cluster
 func GetClusterTagKey(infraName string) (string, error) {
 	if infraName == "" {
-		return "", fmt.Errorf("infraName must be specified")
+		return "", errors.New("failed to GetClusterTagKey: infraName must be specified")
 	}
 
 	return fmt.Sprintf("kubernetes.io/cluster/%s", infraName), nil
@@ -107,4 +114,26 @@ func generateName(prefix string, suffix string, maxLength int) (string, error) {
 	}
 
 	return fmt.Sprintf("%s-%s", prefix, suffix), nil
+}
+
+// GenerateR53Tags returns the tags that should be reconciled on every AWS resource created by this operator
+func GenerateR53Tags(clusterTagKey string) ([]route53Types.Tag, error) {
+	if clusterTagKey == "" {
+		return nil, errors.New("clusterTagKey must not be empty")
+	}
+
+	return []route53Types.Tag{
+		{
+			Key:   aws.String(OperatorTagKey),
+			Value: aws.String(OperatorTagValue),
+		},
+		{
+			Key:   aws.String(clusterTagKey),
+			Value: aws.String("owned"),
+		},
+		{
+			Key:   aws.String(RedHatManagedTagKey),
+			Value: aws.String(RedHatManagedTagValue),
+		},
+	}, nil
 }
