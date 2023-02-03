@@ -12,6 +12,8 @@ require (
 	github.com/aws/smithy-go v1.13.4
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.3
+	github.com/onsi/ginkgo/v2 v2.1.4
+	github.com/onsi/gomega v1.19.0
 	github.com/openshift/api v0.0.0-20220414050251-a83e6f8f1d50
 	github.com/openshift/aws-account-operator/api v0.0.0-20220928162020-39afa7ea38a8
 	github.com/prometheus/client_golang v1.12.2
