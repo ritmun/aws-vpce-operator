@@ -1,0 +1,118 @@
+---
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: ${JOB_NAME}
+objects:
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: ${SERVICE_ACCOUNT}
+    namespace: ${NAMESPACE}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: ${SERVICE_ACCOUNT}
+  rules:
+  - apiGroups:
+    - ""
+    resources:
+    - namespaces
+    - secrets
+    verbs:
+    - get
+    - list
+  - apiGroups:
+    - hive.openshift.io
+    resources:
+    - clusterdeployments
+    verbs:
+    - get
+    - list
+- kind: ClusterRoleBinding
+  apiVersion: rbac.authorization.k8s.io/v1
+  metadata:
+    name: ${SERVICE_ACCOUNT}
+  subjects:
+  - kind: ServiceAccount
+    name: ${SERVICE_ACCOUNT}
+    namespace: ${NAMESPACE}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: ${SERVICE_ACCOUNT}
+- apiVersion: batch/v1
+  kind: Job
+  metadata:
+    name: ${JOB_NAME}-${IMAGE_TAG}-${JOB_ID}
+    namespace: ${NAMESPACE}
+  spec:
+    backoffLimit: 5
+    template:
+      spec:
+        restartPolicy: Never
+        serviceAccountName: ${SERVICE_ACCOUNT}
+        containers:
+        - image: ${TEST_IMAGE}
+          imagePullPolicy: Always
+          name: ${JOB_NAME}
+          command:
+            - /osde2e
+          args:
+            - test
+            - --configs
+            - ${OSDE2E_CONFIGS}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: TEST_HARNESSES
+              value: ${TEST_HARNESS_IMAGE}
+            - name: OCM_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: ocm
+                  key: ocm-token
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: sdcicd-aws
+                  key: aws-access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sdcicd-aws
+                  key: aws-secret-access-key
+            # TODO: set this differently
+            - name: AWS_REGION
+              value: us-east-1    
+parameters:
+- name: OPERATOR_NAME
+  value: 'aws-vpce-operator'
+  required: true
+- name: JOB_NAME
+  value: 'saas-avo-e2e-test'
+  required: true
+- name: NAMESPACE
+  value: 'cluster-scope'
+  required: true
+- name: JOB_ID
+  generate: expression
+  from: "[0-9a-z]{7}"
+#  How does this pipeline store operator commit hash? How can we get it? 
+- name: IMAGE_TAG
+  value: ''
+  required: true
+- name: TEST_IMAGE
+  value: 'quay.io/app-sre'
+- name: TEST_HARNESS_IMAGE
+  value: "quay.io/app-sre/aws-vpse-operator-test-harness:${IMAGE_TAG}"
+- name: SERVICE_ACCOUNT
+  value: "saas-avo-test"
+  displayName: saas-avo-test service account
+  description: name of the service account to use when deploying the pod 
+  
